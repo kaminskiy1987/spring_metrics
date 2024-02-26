@@ -1,0 +1,109 @@
+version: '3'
+services:
+  ######################################################################
+  servicesdb:
+    hostname: servicesdb
+    image: mysql:latest
+    container_name: servicesdb
+    restart: unless-stopped
+    environment:
+      - MYSQL_DATABASE=taskdb
+      - MYSQL_ROOT_PASSWORD=123456
+    volumes:
+      - /database:/var/lib/mysql
+    command: '--default-authentication-plugin=mysql_native_password'
+    ports:
+      - "13306:3306"
+    networks:
+      - app-network
+  ######################################################################
+  taskservice1:
+    hostname: tservice1
+    depends_on:
+      - servicesdb
+      - tserver
+    image: kaminskiy1987/taskservice:0.0.5
+    container_name: tservice1
+    restart: unless-stopped
+    ports:
+      - "8191:8080"
+    networks:
+      - app-network
+  ######################################################################
+  taskservice2:
+    hostname: tservice2
+    depends_on:
+      - tservice1
+      - servicesdb
+      - tserver
+    image: kaminskiy1987/taskservice:0.0.5
+    container_name: tservice2
+    restart: unless-stopped
+    ports:
+      - "8192:8080"
+    networks:
+      - app-network
+  ######################################################################
+  taskservice3:
+    hostname: tservice3
+    depends_on:
+      - tservice2
+      - servicesdb
+      - tserver
+    image: kaminskiy1987/taskservice:0.0.5
+    container_name: tservice3
+    restart: unless-stopped
+    ports:
+      - "8193:8080"
+    networks:
+      - app-network
+  ######################################################################
+  taskserver:
+    hostname: tserver
+    image: kaminskiy1987/taskserver:0.0.5
+    container_name: tserver
+    restart: unless-stopped
+    ports:
+      - "8190:8761"
+    networks:
+      - app-network
+  ######################################################################
+  taskgateway:
+    hostname: tgateway
+    depends_on:
+      - tserver
+      - tservice1
+      - tservice2
+      - tservice3
+    image: kaminskiy1987/taskgateway:0.0.5
+    container_name: tgateway
+    restart: unless-stopped
+    ports:
+      - "8180:8180"
+    networks:
+      - app-network
+  ######################################################################
+  prometheus:
+    hostname: prometheus
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./src/main/resources/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "8200:9090"
+    networks:
+      - app-network
+
+  grafana:
+    hostname: grafana
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "8201:3000"
+    networks:
+      - app-network
+networks:
+  app-network:
+    driver: bridge
